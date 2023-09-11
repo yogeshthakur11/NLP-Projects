@@ -1,0 +1,244 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# # Extract reviews for any movie from IMDB and perform sentiment analysis.
+
+# In[1]:
+
+
+# load packages
+import requests
+from bs4 import BeautifulSoup as bs
+import re
+import matplotlib.pyplot as plt
+# Installing "pip install wordcloud"
+from wordcloud import WordCloud, STOPWORDS
+import nltk
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+
+
+# In[2]:
+
+
+# empty review list
+reviews = []
+url = "https://www.imdb.com/title/tt0468569/reviews?ref_=ttexrv_sa_3"
+
+response = requests.get(url)
+soup = bs(response.content, "html.parser")
+review = soup.find_all("div",attrs = {"class", "text show-more__control"})    
+print("review :", review)
+for j in range(len(review)):
+    reviews.append(review[j].text)
+
+print(reviews)
+
+
+# In[4]:
+
+
+# storing data
+with open("review.txt", "w", encoding="utf8") as output:
+    output.write(str(reviews))
+
+
+# In[5]:
+
+
+# read data
+with open(r"C:\Users\Yogesh Thakur\IMBD REVIEWS-NLP\review.txt", "r", encoding="utf8") as inpt:
+    reviewStr = inpt.read()
+
+
+# In[6]:
+
+
+reviewStr = re.sub("[^A-Za-z" "]+", " ", reviewStr).lower()
+reviewStr
+
+
+# In[10]:
+
+
+# tokenize
+reviewWords = reviewStr.split(" ")
+
+
+# In[13]:
+
+
+# tfidf
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+vectorizer = TfidfVectorizer(use_idf= True, ngram_range=(1,3))
+X = vectorizer.fit_transform(reviewWords)
+vectorizer
+
+
+# In[14]:
+
+
+with open(r"C:\Users\Yogesh Thakur\IMBD REVIEWS-NLP\stop words.txt", "r") as sw:
+    stopWords = sw.read()
+
+
+# In[15]:
+
+
+stopWords = stopWords.split("\n")
+
+
+# In[16]:
+
+
+stopWords.extend(["dark", "knight",""])
+
+
+# In[17]:
+
+
+words = [w for w in reviewWords if w not in stopWords]
+
+reviewStr = " ".join(words)
+
+
+# In[19]:
+
+
+# wordcloud
+
+wordCloud = WordCloud(width=4000, height=2000).generate(reviewStr)
+plt.imshow(wordCloud)
+
+
+# In[20]:
+
+
+# positive wordcloud
+with open(r"C:\Users\Yogesh Thakur\IMBD REVIEWS-NLP\positive words.txt", "r") as sw:
+    positiveWord = sw.read()
+
+
+# In[21]:
+
+
+# Positive word Cloud
+positiveWord = positiveWord.split("\n")
+pWords = [w for w in reviewWords if w in positiveWord]
+reviewStr = " ".join(pWords)
+wordCloud = WordCloud(width=4000, height=2000).generate(reviewStr)
+plt.imshow(wordCloud)
+
+
+# In[22]:
+
+
+# negative wordcloud
+
+with open(r"C:\Users\Yogesh Thakur\IMBD REVIEWS-NLP\Negative words.txt", "r") as sw:
+    negativeWord = sw.read()
+
+
+# In[23]:
+
+
+negativeWord = negativeWord.split("\n")
+nWords = [w for w in reviewWords if w in negativeWord]
+reviewStr = " ".join(nWords)
+wordCloud = WordCloud(width=4000, height=2000).generate(reviewStr)
+plt.imshow(wordCloud)
+
+
+# In[24]:
+
+
+# bigram
+with open("review.txt", "r", encoding="utf8") as inpt:
+    reviewStr = inpt.read()
+
+
+# In[25]:
+
+
+nltk.download('punkt')
+wnl = nltk.WordNetLemmatizer()
+
+
+# In[26]:
+
+
+t = reviewStr.lower()
+t
+
+
+# In[27]:
+
+
+t = t.replace("'", "")
+token = nltk.word_tokenize(t)
+text = nltk.Text(t)
+
+
+# In[28]:
+
+
+textContent = ["".join(re.split("[ .,:;!?''""@#$%^&*()<>{}~\n\t\\\-]", word)) for word in token]
+sStopword = set(stopWords)
+customWord = ["[", "''", ",","``"]
+sStopword = sStopword.union(customWord)
+
+
+# In[29]:
+
+
+textContent = [word for word in textContent if word not in sStopword]
+
+
+# In[30]:
+
+
+# Lemmatizer
+
+textContent = [wnl.lemmatize(t) for t in textContent]
+
+nltkToken = nltk.word_tokenize(t)
+bigramList = list(nltk.bigrams(textContent))
+
+
+# In[32]:
+
+
+dictionary = [' '.join(t) for t in bigramList]
+
+
+# In[33]:
+
+
+# freq in bigram
+vectorizer = CountVectorizer(ngram_range=(2,2))
+bow = vectorizer.fit_transform(dictionary)
+vectorizer.vocabulary_.items()
+
+
+# In[34]:
+
+
+sumWords = bow.sum(axis = 0)
+wordFreq = [(word, sumWords[0, idx]) for word, idx in vectorizer.vocabulary_.items()]
+wordFreq = sorted(wordFreq, key= lambda x: x[1], reverse = True)
+
+
+# In[36]:
+
+
+# wordcloud
+data = dict(wordFreq)
+wc = WordCloud(width=6000, height=3000, stopwords= sStopword).generate_from_frequencies(data)
+plt.imshow(wc)
+
+
+# In[ ]:
+
+
+
+
